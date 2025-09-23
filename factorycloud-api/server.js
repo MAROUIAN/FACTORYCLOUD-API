@@ -5,7 +5,6 @@ const { Pool } = require("pg");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// 🟢 الاتصال مع PostgreSQL (Neon)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -13,51 +12,37 @@ const pool = new Pool({
 
 app.use(bodyParser.json());
 
-// ✅ فحص السيرفر
+// Home route
 app.get("/", (req, res) => {
-  res.send("FactoryCloud API OK ✅");
+  res.send("FactoryCloud API OK 🚀");
 });
 
-// 📥 جلب كل الطلبات
+// Get orders
 app.get("/orders", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
     res.json(result.rows);
   } catch (err) {
-    console.error("Error fetching orders:", err);
-    res.status(500).json({ error: "Database error" });
+    console.error(err);
+    res.status(500).send("Error fetching orders");
   }
 });
 
-// ➕ إضافة طلب جديد
+// Add order
 app.post("/orders", async (req, res) => {
+  const { order_no, branch, quantity, due_date } = req.body;
   try {
-    const { order_no, branch, quantity, due_date } = req.body;
     const result = await pool.query(
-      `INSERT INTO orders (order_no, branch, quantity, due_date, status, created_at) 
-       VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
-      [order_no, branch, quantity, due_date, "Not Scheduled"]
+      "INSERT INTO orders (order_no, branch, quantity, due_date, status) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+      [order_no, branch, quantity, due_date, "not scheduled"]
     );
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("Error inserting order:", err);
-    res.status(500).json({ error: "Database error" });
+    console.error(err);
+    res.status(500).send("Error adding order");
   }
 });
 
-// 🗑 حذف طلب
-app.delete("/orders/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query("DELETE FROM orders WHERE id = $1", [id]);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Error deleting order:", err);
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
-// 🚀 تشغيل السيرفر
 app.listen(port, () => {
-  console.log(✅ Server running on port ${port});
+  console.log(🚀 Server running on port ${port});
 });
