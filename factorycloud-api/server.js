@@ -5,7 +5,6 @@ const { Pool } = require("pg");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Render يحط DATABASE_URL تلقائيًا
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -13,23 +12,37 @@ const pool = new Pool({
 
 app.use(bodyParser.json());
 
-// 🔹 اختبار
-app.get("/", (req, res) => res.send("FactoryCloud API OK 🚀"));
+// Home route
+app.get("/", (req, res) => {
+  res.send("FactoryCloud API OK 🚀");
+});
 
-// 🔹 إضافة طلب
+// Get orders
+app.get("/orders", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error fetching orders");
+  }
+});
+
+// Add order
 app.post("/orders", async (req, res) => {
   const { order_no, branch, quantity, due_date } = req.body;
-  const result = await pool.query(
-    "INSERT INTO orders (order_no, branch, quantity, due_date, status) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-    [order_no, branch, quantity, due_date, "Not Scheduled"]
-  );
-  res.json(result.rows[0]);
+  try {
+    const result = await pool.query(
+      "INSERT INTO orders (order_no, branch, quantity, due_date, status) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+      [order_no, branch, quantity, due_date, "not scheduled"]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error adding order");
+  }
 });
 
-// 🔹 عرض الطلبات
-app.get("/orders", async (req, res) => {
-  const result = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
-  res.json(result.rows);
+app.listen(port, () => {
+  console.log(🚀 Server running on port ${port});
 });
-
-app.listen(port, () => console.log(`✅ Server running on port ${port}`));
